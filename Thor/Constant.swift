@@ -18,6 +18,7 @@ let launcherAppId = "me.alvinzhu.Thor.LauncherApplication"
 let titleViewIdentifier             = NSToolbarItem.Identifier("titleViewIdentifier")
 let appsTitleItemIdentifier         = NSToolbarItem.Identifier("appsTitleItemIdentifier")
 let settingsTitleItemIdentifier     = NSToolbarItem.Identifier("settingsTitleItemIdentifier")
+let keyboardTitleItemIdentifier     = NSToolbarItem.Identifier("keyboardTitleItemIdentifier")
 let shortcutTableCellViewIdentifier = "ShortcutTableCellView"
 
 // Color Set
@@ -27,4 +28,6 @@ let windowbackgroundColorName = "WindowBackgroundColor"
 extension Notification.Name {
     static let killLauncher = Notification.Name("killLauncher")
     static let updateMenuBarToggleState = Notification.Name("updateMenuBarToggleState")
+    static let shortcutAssignmentsDidChange = Notification.Name("shortcutAssignmentsDidChange")
+    static let shortcutEnableStateDidChange = Notification.Name("shortcutEnableStateDidChange")
 }

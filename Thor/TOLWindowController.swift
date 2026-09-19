@@ -20,11 +20,11 @@ class TOLWindowController: NSWindowController {
 
         window?.titlebarAppearsTransparent = true
         window?.titleVisibility = .hidden
-        if #available(OSX 10.13, *) {
-            window?.backgroundColor = NSColor(named: windowbackgroundColorName)
-        } else {
-            window?.backgroundColor = .white
-        }
+        window?.appearance = NSAppearance(named: .darkAqua)
+        window?.isOpaque = false
+        window?.backgroundColor = NSColor.black.withAlphaComponent(0.82)
+        window?.isMovableByWindowBackground = true
+        window?.toolbarStyle = .unifiedCompact
 
         let toolbar = NSToolbar(identifier: "toolbar")
         toolbar.delegate = self
@@ -77,6 +77,7 @@ class TOLWindowController: NSWindowController {
             contentViewController?.insertChild(viewController, at: 0)
             contentViewController?.view.addSubview(viewController.view)
             contentViewController?.view.frame = viewController.view.frame
+            window?.setContentSize(viewController.view.frame.size)
         }
     }
 
@@ -128,7 +129,7 @@ class TitleView: NSView {
     }
 
     @objc func toggle(_ sender: TitleViewItem) {
-        items.forEach { $0.state = ($0 != sender) ? .on : .off }
+        items.forEach { $0.setSelected($0 == sender) }
 
         toggleCallback?(sender)
     }
@@ -153,11 +154,27 @@ class TitleViewItem: NSButton {
 
         identifier = NSUserInterfaceItemIdentifier(rawValue: itemIdentifier)
         isBordered = false
+        imagePosition = .imageOnly
+        imageScaling = .scaleProportionallyDown
+        contentTintColor = NSColor.white.withAlphaComponent(0.72)
         setButtonType(.toggle)
+        wantsLayer = true
+        layer?.cornerRadius = 11
+        layer?.cornerCurve = .continuous
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func setSelected(_ selected: Bool) {
+        state = selected ? .off : .on
+        layer?.backgroundColor = selected ?
+            NSColor.white.withAlphaComponent(0.14).cgColor :
+            NSColor.clear.cgColor
+        contentTintColor = selected ?
+            NSColor.white.withAlphaComponent(0.94) :
+            NSColor.white.withAlphaComponent(0.42)
     }
 
 }

@@ -28,6 +28,8 @@
 		E166F32B1CE4B7E300F7C7B8 /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166F32A1CE4B7E300F7C7B8 /* StatusItemController.swift */; };
 		E166F3391CE7801A00F7C7B8 /* ShortcutListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166F3371CE7801A00F7C7B8 /* ShortcutListViewController.swift */; };
 		E166F3401CE781EC00F7C7B8 /* ShortcutMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E166F33F1CE781EC00F7C7B8 /* ShortcutMonitor.swift */; };
+		C0D3A00231A0000000000002 /* KeyboardShortcutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A00131A0000000000001 /* KeyboardShortcutViewController.swift */; };
+		C0D3A00431A0000000000004 /* ExternalShortcutDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A00331A0000000000003 /* ExternalShortcutDetector.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -69,6 +71,8 @@
 		E166F3371CE7801A00F7C7B8 /* ShortcutListViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShortcutListViewController.swift; sourceTree = "<group>"; };
 		E166F33F1CE781EC00F7C7B8 /* ShortcutMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShortcutMonitor.swift; sourceTree = "<group>"; };
 		E1ED9837212B258D008FCB7D /* Thor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Thor.entitlements; sourceTree = "<group>"; };
+		C0D3A00131A0000000000001 /* KeyboardShortcutViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutViewController.swift; sourceTree = "<group>"; };
+		C0D3A00331A0000000000003 /* ExternalShortcutDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalShortcutDetector.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +107,7 @@
 		B2D65A0A1CDB2CAF00E39A65 /* Controller */ = {
 			isa = PBXGroup;
 			children = (
+				C0D3A00131A0000000000001 /* KeyboardShortcutViewController.swift */,
 				E166F32A1CE4B7E300F7C7B8 /* StatusItemController.swift */,
 				B2E1B0681CC4CDD100FB687F /* TOLWindowController.swift */,
 				B2B04B771CC74DC7005C9BEF /* MainWindowController.swift */,
@@ -160,6 +165,7 @@
 			children = (
 				B2E1B0561CC4A85700FB687F /* AppsManager.swift */,
 				E166F33F1CE781EC00F7C7B8 /* ShortcutMonitor.swift */,
+				C0D3A00331A0000000000003 /* ExternalShortcutDetector.swift */,
 				635363141D0FF2B00094EFCE /* Defaults.swift */,
 			);
 			name = Helper;
@@ -379,6 +385,8 @@
 				E166F32B1CE4B7E300F7C7B8 /* StatusItemController.swift in Sources */,
 				E166F3401CE781EC00F7C7B8 /* ShortcutMonitor.swift in Sources */,
 				B2D65A071CDAF2D500E39A65 /* NSApplication+Extension.swift in Sources */,
+				C0D3A00231A0000000000002 /* KeyboardShortcutViewController.swift in Sources */,
+				C0D3A00431A0000000000004 /* ExternalShortcutDetector.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

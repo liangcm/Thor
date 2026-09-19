@@ -71,18 +71,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showMainWindow()
+        return true
+    }
+
     func showMainWindow() {
-        if let rootViewController = mainWindowController {
-            rootViewController.showWindow(nil)
-        } else {
-            let storyboard = NSStoryboard(name: "Main", bundle: nil)
-            let viewController = storyboard.instantiateController(withIdentifier: MainWindowController.className)
-            let rootViewController = viewController as? MainWindowController
-            mainWindowController = rootViewController
-            mainWindowController?.showWindow(nil)
-        }
+        let rootViewController = loadMainWindowController()
+        rootViewController?.showWindow(nil)
 
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func loadMainWindowController() -> MainWindowController? {
+        if let mainWindowController = mainWindowController {
+            return mainWindowController
+        }
+
+        let storyboard = NSStoryboard(name: "Main", bundle: nil)
+        let controller = storyboard.instantiateController(withIdentifier: MainWindowController.className)
+            as? MainWindowController
+        mainWindowController = controller
+        _ = controller?.window
+        return controller
     }
 
     // MARK: Listen events

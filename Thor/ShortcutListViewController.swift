@@ -28,12 +28,24 @@ class ShortcutListViewController: NSViewController {
         super.viewDidLoad()
 
         view.layer?.backgroundColor = NSColor.clear.cgColor
+        tableView.backgroundColor = .clear
+        tableView.gridColor = NSColor.white.withAlphaComponent(0.12)
 
         tableView.registerForDraggedTypes([dragDropType])
 
         observation = AppsManager.manager.observe(\.selectedApps, changeHandler: { [unowned self] (_, _) in
             self.tableView.reloadData()
         })
+        NotificationCenter.default.addObserver(self, selector: #selector(reloadShortcuts),
+                                               name: .shortcutAssignmentsDidChange, object: nil)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func reloadShortcuts() {
+        tableView.reloadData()
     }
 
     @IBAction func add(_ sender: AnyObject) {

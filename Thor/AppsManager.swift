@@ -67,7 +67,32 @@ class AppsManager: NSObject {
 
         if saveData(to: selectedAppsFilePath) {
             ShortcutMonitor.register()
+            notifyChanges()
         }
+    }
+
+    func assign(_ app: AppModel, shortcut: MASShortcut, replacing replacedApp: AppModel?) {
+        ShortcutMonitor.unregister()
+
+        if let replacedApp = replacedApp, replacedApp != app {
+            replacedApp.shortcut = nil
+        }
+
+        if let existingApp = selectedApps.first(where: { $0 == app }) {
+            existingApp.shortcut = shortcut
+        } else {
+            app.shortcut = shortcut
+            selectedApps.append(app)
+        }
+
+        if saveData(to: selectedAppsFilePath) {
+            ShortcutMonitor.register()
+            notifyChanges()
+        }
+    }
+
+    func clearShortcut(for app: AppModel) {
+        save(app, shortcut: nil)
     }
 
     func delete(_ index: Int) {
@@ -79,6 +104,7 @@ class AppsManager: NSObject {
 
         if saveData(to: selectedAppsFilePath) {
             ShortcutMonitor.register()
+            notifyChanges()
         }
     }
 
@@ -99,6 +125,7 @@ class AppsManager: NSObject {
                 }
             }
             _ = saveData(to: selectedAppsFilePath)
+            notifyChanges()
         } catch {
             if #available(macOS 11.0, *) {
                 Logger.app.error("can't load with err: \(error.localizedDescription), path: \(path)")
@@ -115,6 +142,7 @@ class AppsManager: NSObject {
         selectedApps.insert(contentsOf: apps, at: target)
 
         _ = saveData(to: selectedAppsFilePath)
+        notifyChanges()
     }
 
     func saveData(to path: String) -> Bool {
@@ -129,6 +157,10 @@ class AppsManager: NSObject {
             }
             return false
         }
+    }
+
+    private func notifyChanges() {
+        NotificationCenter.default.post(name: .shortcutAssignmentsDidChange, object: self)
     }
 
 }

@@ -19,30 +19,48 @@ extension Logger {
 
 class AppModel: NSObject {
 
-    let appBundleURL: URL
+    let appBundleURL: URL?
+    let appBundleIdentifier: String?
     let appDisplayName: String
     var shortcut: MASShortcut?
+    private let storedIconData: Data?
 
     private enum InfoKeys: String {
-        case appBundleURL, appDisplayName, shortcut, bookmark
+        case appBundleURL, appBundleIdentifier, appDisplayName, appIconData, shortcut, bookmark
+    }
+
+    var resolvedAppBundleURL: URL? {
+        if let identifier = appBundleIdentifier,
+           let installedURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier) {
+            return installedURL
+        }
+        return appBundleURL
     }
 
     var icon: NSImage? {
-        guard let bundle = Bundle(url: appBundleURL) else {
-            return nil
+        if let storedIconData = storedIconData, let image = NSImage(data: storedIconData) {
+            image.size = NSSize(width: 48, height: 48)
+            return image
         }
+
+        guard let appURL = resolvedAppBundleURL else { return nil }
+        let bundle = Bundle(url: appURL)
 
         var iconImage: NSImage?
 
-        if let iconFileName = (bundle.infoDictionary?["CFBundleIconFile"]) as? String,
-           let iconFilePath = bundle.pathForImageResource(iconFileName) {
+        if let iconFileName = (bundle?.infoDictionary?["CFBundleIconFile"]) as? String,
+           let iconFilePath = bundle?.pathForImageResource(iconFileName) {
             iconImage = NSImage(contentsOfFile: iconFilePath)
-        } else if let iconName = (bundle.infoDictionary?["CFBundleIconName"]) as? String,
-                  let image = bundle.image(forResource: iconName) {
+        } else if let iconName = (bundle?.infoDictionary?["CFBundleIconName"]) as? String,
+                  let image = bundle?.image(forResource: iconName) {
             iconImage = image
         }
 
-        iconImage?.size = NSSize(width: 36, height: 36)
+        if iconImage == nil {
+            iconImage = NSWorkspace.shared.icon(forFile: appURL.path)
+        }
+
+        iconImage?.size = NSSize(width: 48, height: 48)
 
         return iconImage
     }
@@ -55,63 +73,96 @@ class AppModel: NSObject {
         }
 
         self.appBundleURL = appBundle.bundleURL
+        self.appBundleIdentifier = appBundle.bundleIdentifier
         self.appDisplayName = displayName
+        self.storedIconData = nil
+    }
+
+    init?(appURL: URL) {
+        let url = appURL.standardizedFileURL
+        guard url.pathExtension.lowercased() == "app", Bundle(url: url) != nil else {
+            return nil
+        }
+
+        self.appBundleURL = url
+        self.appBundleIdentifier = Bundle(url: url)?.bundleIdentifier
+        self.appDisplayName = FileManager.default.displayName(atPath: url.path)
+        self.storedIconData = nil
     }
 
     init?(dict: NSDictionary) {
-        guard let appBundle = dict.object(forKey: InfoKeys.appBundleURL.rawValue) as? String,
-              let bundleURL = URL(string: appBundle), Bundle(url: bundleURL) != nil,
-              let displayName = dict.object(forKey: InfoKeys.appDisplayName.rawValue) as? String,
-              let shortcut = dict.object(forKey: InfoKeys.shortcut.rawValue) as? MASShortcut else {
+        guard let displayName = dict.object(forKey: InfoKeys.appDisplayName.rawValue) as? String else {
             if #available(macOS 11.0, *) {
                 Logger.app.error("invalid app: \(dict)")
             }
             return nil
         }
 
-        self.appBundleURL = bundleURL
+        let appBundle = dict.object(forKey: InfoKeys.appBundleURL.rawValue) as? String
+        self.appBundleURL = appBundle.flatMap { URL(string: $0) }
+        self.appBundleIdentifier = dict.object(forKey: InfoKeys.appBundleIdentifier.rawValue) as? String
         self.appDisplayName = displayName
-        self.shortcut = shortcut
+        self.shortcut = dict.object(forKey: InfoKeys.shortcut.rawValue) as? MASShortcut
+        self.storedIconData = nil
     }
 
     init?(jsonValue: [String: String]) {
-        guard let appBundle = jsonValue[InfoKeys.appBundleURL.rawValue],
-              let bundleURL = URL(string: appBundle), Bundle(url: bundleURL) != nil,
-              let displayName = jsonValue[InfoKeys.appDisplayName.rawValue],
-              let shortcutString = jsonValue[InfoKeys.shortcut.rawValue],
-              let shortcut = MASShortcut(from: shortcutString) else {
+        guard let displayName = jsonValue[InfoKeys.appDisplayName.rawValue] else {
             if #available(macOS 11.0, *) {
                 Logger.app.error("invalid app: \(jsonValue)")
             }
             return nil
         }
 
-        self.appBundleURL = bundleURL
+        if let appBundle = jsonValue[InfoKeys.appBundleURL.rawValue], !appBundle.isEmpty {
+            self.appBundleURL = URL(string: appBundle)
+        } else {
+            self.appBundleURL = nil
+        }
+        let identifier = jsonValue[InfoKeys.appBundleIdentifier.rawValue]
+        self.appBundleIdentifier = identifier?.isEmpty == false ? identifier : nil
         self.appDisplayName = displayName
-        self.shortcut = shortcut
+        self.storedIconData = jsonValue[InfoKeys.appIconData.rawValue].flatMap { Data(base64Encoded: $0) }
+        if let shortcutString = jsonValue[InfoKeys.shortcut.rawValue], !shortcutString.isEmpty {
+            self.shortcut = MASShortcut(from: shortcutString)
+        }
     }
 
     func encode() -> NSDictionary {
         var dict = [String: Any]()
-        dict[InfoKeys.appBundleURL.rawValue] = appBundleURL.absoluteString
+        dict[InfoKeys.appBundleURL.rawValue] = appBundleURL?.absoluteString ?? ""
+        dict[InfoKeys.appBundleIdentifier.rawValue] = appBundleIdentifier ?? ""
         dict[InfoKeys.appDisplayName.rawValue] = appDisplayName
+        dict[InfoKeys.appIconData.rawValue] = storedIconData ?? NSNull()
         dict[InfoKeys.shortcut.rawValue] = shortcut ?? NSNull()
 
         return dict as NSDictionary
     }
 
     func encodeToJSONValue() -> [String: String] {
-        return [
-            InfoKeys.appBundleURL.rawValue: appBundleURL.absoluteString,
+        var value = [
+            InfoKeys.appBundleURL.rawValue: appBundleURL?.absoluteString ?? "",
+            InfoKeys.appBundleIdentifier.rawValue: appBundleIdentifier ?? "",
             InfoKeys.appDisplayName.rawValue: appDisplayName,
             InfoKeys.shortcut.rawValue: shortcut?.toString() ?? ""
         ]
+        if let storedIconData = storedIconData {
+            value[InfoKeys.appIconData.rawValue] = storedIconData.base64EncodedString()
+        }
+        return value
     }
 
 }
 
 func == (lhs: AppModel, rhs: AppModel) -> Bool {
-    return lhs.appBundleURL.absoluteString == rhs.appBundleURL.absoluteString
+    if let leftIdentifier = lhs.appBundleIdentifier, let rightIdentifier = rhs.appBundleIdentifier,
+       !leftIdentifier.isEmpty, !rightIdentifier.isEmpty {
+        return leftIdentifier == rightIdentifier
+    }
+    guard let leftURL = lhs.appBundleURL, let rightURL = rhs.appBundleURL else { return false }
+    let leftPath = leftURL.standardizedFileURL.resolvingSymlinksInPath().path
+    let rightPath = rightURL.standardizedFileURL.resolvingSymlinksInPath().path
+    return leftPath == rightPath
 }
 
 extension MASShortcut {

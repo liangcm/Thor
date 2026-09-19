@@ -19,3 +19,30 @@
 "Disable Shortcuts" = "停用快捷键";
 
 "Enable Shortcuts" = "启用快捷键";
+
+"Keyboard Mapping" = "键盘映射";
+"Drag an app from Finder onto a key. The shortcut is Control plus that key." = "从访达拖入应用到键帽，快捷键将设为 Control 加对应按键。";
+"Shortcut Conflict" = "快捷键冲突";
+"Shortcut Already Assigned" = "快捷键已被分配";
+"Unsupported Item" = "不支持的项目";
+"Only macOS application bundles (.app) can be dropped here." = "这里只能拖入 macOS 应用程序（.app）。";
+"Replace" = "替换";
+"Clear Shortcut" = "清除快捷键";
+"Global shortcuts enabled" = "全局快捷键已启用";
+"Global shortcuts disabled" = "全局快捷键已停用";
+"Other global shortcuts" = "其他全局快捷键";
+"%d shortcuts configured · Right-click a key to clear it" = "%d 个快捷键 · 右键键帽可清除";
+"OK" = "好";
+"Not assigned inside Thor" = "Thor 内未分配";
+"Currently assigned inside Thor to %@" = "Thor 内当前分配给 %@";
+"%@ is currently assigned to %@. Replacing it will clear that app's shortcut." = "%@ 当前分配给 %@。替换后将清除该应用的快捷键。";
+"%@ cannot be registered.\n\nThor: %@\nmacOS or another app: already in use\n\nChange the existing shortcut and try again." = "%@ 无法注册。\n\nThor：%@\nmacOS 或其他应用：已占用\n\n请修改现有快捷键后重试。";
+"Thor has %d apps assigned to %@" = "Thor 有 %d 个应用同时分配了 %@";
+"%@ is also used by macOS or another app" = "%@ 同时被 macOS 或其他应用占用";
+"%@ is occupied by macOS or another app" = "%@ 已被 macOS 或其他应用占用";
+"%@ is occupied by %@" = "%@ 已被 %@ 占用";
+"External: %@" = "外部：%@";
+"%@ cannot be registered.\n\nThor: %@\nExternal: %@\n\nChange the existing shortcut and try again." = "%@ 无法注册。\n\nThor：%@\n外部：%@\n\n请修改现有快捷键后重试。";
+"%d shortcut conflicts found. Red keys need attention." = "发现 %d 个快捷键冲突，请处理红色键帽。";
+"%d keys occupied externally · Red keys cannot be assigned" = "%d 个键位被外部占用 · 红色键不可分配";
+"%d apps mapped · Right-click a key to clear it" = "已映射 %d 个应用 · 右键键帽可清除";

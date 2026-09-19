@@ -61,6 +61,7 @@ class SettingsViewController: NSViewController {
         } else {
             ShortcutMonitor.unregister()
         }
+        NotificationCenter.default.post(name: .shortcutEnableStateDidChange, object: self)
     }
 
     @IBAction func toggleEnableMenuBarIcon(_ sender: Any) {
