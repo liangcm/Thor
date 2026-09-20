@@ -28,6 +28,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Life cycle
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        // Preserve preferences when moving from Thor's identity to Thor+.
+        if let identifier = Bundle.main.bundleIdentifier,
+           UserDefaults.standard.persistentDomain(forName: identifier) == nil,
+           let legacy = UserDefaults.standard.persistentDomain(forName: "me.alvinzhu.Thor") {
+            UserDefaults.standard.setPersistentDomain(legacy, forName: identifier)
+        }
         defaults.register(defaults: [
             DefaultsKeys.DeactivateKey.key: 0,
             DefaultsKeys.DelayInterval.key: 0.3,
@@ -57,6 +63,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         MASShortcutValidator.shared().allowAnyShortcutWithOptionModifier = true
         ShortcutMonitor.register()
+        NotificationClearShortcut.start()
 
         if AppsManager.manager.selectedApps.count == 0 {
             showMainWindow()
@@ -81,6 +88,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         rootViewController?.showWindow(nil)
 
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func toggleMainWindow() {
+        if let window = mainWindowController?.window,
+           window.isVisible, !window.isMiniaturized, !NSApp.isHidden {
+            window.orderOut(nil)
+        } else {
+            mainWindowController?.window?.deminiaturize(nil)
+            showMainWindow()
+        }
     }
 
     private func loadMainWindowController() -> MainWindowController? {

@@ -34,10 +34,16 @@ class AppModel: NSObject {
            let installedURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier) {
             return installedURL
         }
-        return appBundleURL
+        guard let url = appBundleURL, let bundle = Bundle(url: url) else { return nil }
+        if let identifier = appBundleIdentifier, !identifier.isEmpty,
+           bundle.bundleIdentifier != identifier { return nil }
+        return url
     }
 
     var icon: NSImage? {
+        if appBundleIdentifier == "thorplus.action.show-desktop" {
+            return NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: "显示桌面")
+        }
         if let storedIconData = storedIconData, let image = NSImage(data: storedIconData) {
             image.size = NSSize(width: 48, height: 48)
             return image

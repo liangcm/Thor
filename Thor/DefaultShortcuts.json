@@ -1,0 +1,112 @@
+[
+  {
+    "appBundleIdentifier": "com.larksuite.larkApp",
+    "appDisplayName": "Lark",
+    "shortcut": "ctrl+l"
+  },
+  {
+    "appBundleIdentifier": "com.google.Chrome",
+    "appDisplayName": "Google Chrome",
+    "shortcut": "ctrl+g"
+  },
+  {
+    "appBundleIdentifier": "com.tencent.xinWeChat",
+    "appDisplayName": "微信",
+    "shortcut": "ctrl+w"
+  },
+  {
+    "appBundleIdentifier": "com.apple.Safari",
+    "appDisplayName": "Safari浏览器",
+    "shortcut": "ctrl+s"
+  },
+  {
+    "appBundleIdentifier": "com.apple.finder",
+    "appDisplayName": "访达",
+    "shortcut": "ctrl+f"
+  },
+  {
+    "appBundleIdentifier": "com.apple.Notes",
+    "appDisplayName": "备忘录",
+    "shortcut": "ctrl+n"
+  },
+  {
+    "appBundleIdentifier": "com.bytedance.douyin.desktop",
+    "appDisplayName": "抖音",
+    "shortcut": "ctrl+d"
+  },
+  {
+    "appBundleIdentifier": "com.apple.systempreferences",
+    "appDisplayName": "系统设置",
+    "shortcut": "ctrl+,"
+  },
+  {
+    "appBundleIdentifier": "com.nssurge.surge-mac",
+    "appDisplayName": "Surge",
+    "shortcut": "ctrl+/"
+  },
+  {
+    "appBundleIdentifier": "com.google.Chrome.app.agimnkijcaahngcdmfeangaknmldooml",
+    "appDisplayName": "YouTube",
+    "shortcut": "ctrl+y"
+  },
+  {
+    "appBundleIdentifier": "com.google.Chrome.app.lodlkdfmihgonocnmddehnfgiljnadcf",
+    "appDisplayName": "X",
+    "shortcut": "ctrl+x"
+  },
+  {
+    "appBundleIdentifier": "com.nssurge.surge-dashboard",
+    "appDisplayName": "Surge Dashboard",
+    "shortcut": "shift+ctrl+/"
+  },
+  {
+    "appBundleIdentifier": "com.bot.neotix.doubao",
+    "appDisplayName": "豆包",
+    "shortcut": "ctrl+a"
+  },
+  {
+    "appBundleIdentifier": "com.xingin.discover",
+    "appDisplayName": "rednote",
+    "shortcut": "ctrl+e"
+  },
+  {
+    "appBundleIdentifier": "com.google.Chrome.app.fmgjjmmmlfnkbppncabfkddbjimcfncm",
+    "appDisplayName": "Gmail",
+    "shortcut": "ctrl+m"
+  },
+  {
+    "appBundleIdentifier": "com.openai.chat",
+    "appDisplayName": "ChatGPT",
+    "shortcut": ""
+  },
+  {
+    "appBundleIdentifier": "md.obsidian",
+    "appDisplayName": "Obsidian",
+    "shortcut": "shift+ctrl+o"
+  },
+  {
+    "appBundleIdentifier": "com.netease.filmlymac",
+    "appDisplayName": "网易爆米花",
+    "shortcut": "ctrl+b"
+  },
+  {
+    "appBundleIdentifier": "com.tencent.weread",
+    "appDisplayName": "微信读书",
+    "shortcut": "ctrl+r"
+  },
+  {
+    "appBundleIdentifier": "com.ray.livingroommode",
+    "appDisplayName": "Mac TV",
+    "shortcut": ""
+  },
+  {
+    "appBundleIdentifier": "com.openai.codex",
+    "appDisplayName": "Codex",
+    "shortcut": "ctrl+o"
+  },
+  {
+    "appBundleIdentifier": "com.bilibili.bilibiliPC",
+    "appDisplayName": "哔哩哔哩",
+    "shortcut": ""
+  }
+]

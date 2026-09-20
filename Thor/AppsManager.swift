@@ -48,7 +48,61 @@ class AppsManager: NSObject {
     override init() {
         super.init()
 
-        loadApps(from: selectedAppsFilePath)
+        let path = selectedAppsFilePath
+        if !FileManager.default.fileExists(atPath: path),
+           !FileManager.default.fileExists(atPath: (path as NSString).deletingPathExtension),
+           let bundledDefaults = Bundle.main.url(forResource: "DefaultShortcuts", withExtension: "json") {
+            loadApps(from: bundledDefaults.path)
+        } else {
+            loadApps(from: path)
+        }
+        // Add the requested system action once without replacing existing assignments.
+        let migrationKey = "ThorPlusControlCenterShortcutV2"
+        if !UserDefaults.standard.bool(forKey: migrationKey),
+           let shortcut = MASShortcut(from: "ctrl+down"),
+           !selectedApps.contains(where: { $0.shortcut?.keyCode == shortcut.keyCode &&
+               $0.shortcut?.modifierFlags == shortcut.modifierFlags }),
+           let app = AppModel(jsonValue: ["appBundleIdentifier": "com.apple.controlcenter",
+                                         "appBundleURL": "file:///System/Library/CoreServices/ControlCenter.app/",
+                                         "appDisplayName": "控制中心", "shortcut": "ctrl+down"]) {
+            if let existing = selectedApps.first(where: { $0.appBundleIdentifier == "com.apple.controlcenter" }) {
+                existing.shortcut = shortcut
+            } else {
+                selectedApps.append(app)
+            }
+            if saveData(to: path) {
+                UserDefaults.standard.set(true, forKey: migrationKey)
+            }
+        }
+        let openWindowMigrationKey = "ThorPlusOpenWindowShortcutV1"
+        let desktopMigrationKey = "ThorPlusShowDesktopShortcutV1"
+        if !UserDefaults.standard.bool(forKey: desktopMigrationKey),
+           let shortcut = MASShortcut(from: "ctrl+h"),
+           !selectedApps.contains(where: { $0.shortcut?.keyCode == shortcut.keyCode &&
+               $0.shortcut?.modifierFlags == shortcut.modifierFlags }),
+           !selectedApps.contains(where: { $0.appBundleIdentifier == "thorplus.action.show-desktop" }),
+           let app = AppModel(jsonValue: ["appBundleIdentifier": "thorplus.action.show-desktop",
+                                         "appDisplayName": "显示桌面", "shortcut": "ctrl+h"]) {
+            selectedApps.append(app)
+            if saveData(to: path) { UserDefaults.standard.set(true, forKey: desktopMigrationKey) }
+        }
+        if !UserDefaults.standard.bool(forKey: openWindowMigrationKey),
+           let identifier = Bundle.main.bundleIdentifier,
+           let shortcut = MASShortcut(from: "shift+ctrl+t"),
+           !selectedApps.contains(where: { $0.shortcut?.keyCode == shortcut.keyCode &&
+               $0.shortcut?.modifierFlags == shortcut.modifierFlags }),
+           let app = AppModel(jsonValue: ["appBundleIdentifier": identifier,
+                                         "appBundleURL": Bundle.main.bundleURL.absoluteString,
+                                         "appDisplayName": "Thor+", "shortcut": "shift+ctrl+t"]) {
+            if let existing = selectedApps.first(where: { $0.appBundleIdentifier == identifier }) {
+                existing.shortcut = shortcut
+            } else {
+                selectedApps.append(app)
+            }
+            if saveData(to: path) {
+                UserDefaults.standard.set(true, forKey: openWindowMigrationKey)
+            }
+        }
     }
 
     // MARK: Actions

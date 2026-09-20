@@ -362,12 +362,14 @@ final class KeyboardShortcutViewController: NSViewController, KeyboardKeyViewDel
             conflictCount += conflict == nil ? 0 : 1
         }
 
-        let otherShortcuts = AppsManager.manager.selectedApps.compactMap { app -> String? in
+        var otherShortcuts = AppsManager.manager.selectedApps.compactMap { app -> String? in
             guard let shortcut = app.shortcut else { return nil }
             let appearsOnKeyboard = keyViews.keys.contains { shortcutsEqual(shortcut, makeShortcut(for: $0)) }
             guard !appearsOnKeyboard else { return nil }
             return "\(app.appDisplayName) \(shortcutDisplayName(shortcut))"
         }
+        otherShortcuts.append("清除通知 ⌃−（仅通知中心展开时）")
+        otherShortcuts.append("键盘背光 ⇧F1 / ⇧F2")
         otherShortcutsLabel.isHidden = otherShortcuts.isEmpty
         otherShortcutsLabel.stringValue = otherShortcuts.isEmpty ? "" :
             "Other global shortcuts".localized() + "：" + otherShortcuts.joined(separator: " · ")

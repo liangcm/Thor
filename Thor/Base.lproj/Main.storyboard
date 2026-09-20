@@ -12,11 +12,11 @@
                 <application id="hnw-xV-0zn" sceneMemberID="viewController">
                     <menu key="mainMenu" title="Main Menu" systemMenu="main" id="AYu-sK-qS6">
                         <items>
-                            <menuItem title="Thor" id="1Xt-HY-uBw">
+                            <menuItem title="Thor+" id="1Xt-HY-uBw">
                                 <modifierMask key="keyEquivalentModifierMask"/>
-                                <menu key="submenu" title="Thor" systemMenu="apple" id="uQy-DD-JDr">
+                                <menu key="submenu" title="Thor+" systemMenu="apple" id="uQy-DD-JDr">
                                     <items>
-                                        <menuItem title="Hide Thor" keyEquivalent="h" id="Olw-nP-bQN">
+                                        <menuItem title="Hide Thor+" keyEquivalent="h" id="Olw-nP-bQN">
                                             <connections>
                                                 <action selector="hide:" target="Ady-hI-5gd" id="PnN-Uc-m68"/>
                                             </connections>
@@ -34,7 +34,7 @@
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="kCx-OE-vgT"/>
-                                        <menuItem title="Quit Thor" keyEquivalent="q" id="4sb-4s-VLi">
+                                        <menuItem title="Quit Thor+" keyEquivalent="q" id="4sb-4s-VLi">
                                             <connections>
                                                 <action selector="terminate:" target="Ady-hI-5gd" id="Te7-pn-YzF"/>
                                             </connections>
@@ -337,7 +337,7 @@
                         <subviews>
                             <button translatesAutoresizingMaskIntoConstraints="NO" id="XJy-eX-prE">
                                 <rect key="frame" x="45" y="434" width="153" height="18"/>
-                                <buttonCell key="cell" type="check" title="Launch Thor at login" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="Uwv-xu-Spi">
+                                <buttonCell key="cell" type="check" title="Launch Thor+ at login" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="Uwv-xu-Spi">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" size="13" name="STHeitiSC-Light"/>
                                 </buttonCell>
@@ -382,7 +382,7 @@
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="prA-Il-0qM">
                                 <rect key="frame" x="83" y="13" width="200" height="32"/>
-                                <buttonCell key="cell" type="push" title="Quit Thor" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="2nX-9N-OOj">
+                                <buttonCell key="cell" type="push" title="Quit Thor+" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="2nX-9N-OOj">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
@@ -451,7 +451,7 @@
                             </button>
                             <button translatesAutoresizingMaskIntoConstraints="NO" id="d3U-w9-jNg">
                                 <rect key="frame" x="45" y="336" width="192" height="18"/>
-                                <buttonCell key="cell" type="check" title="Show Thor in the menu bar" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="LbD-19-0Ga">
+                                <buttonCell key="cell" type="check" title="Show Thor+ in the menu bar" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="LbD-19-0Ga">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" size="13" name="STHeitiSC-Light"/>
                                 </buttonCell>
@@ -464,7 +464,7 @@
                             </button>
                             <button translatesAutoresizingMaskIntoConstraints="NO" id="Lcx-bw-woE" userLabel="Btn Enable Menu Bar Icon Show/Hide Key">
                                 <rect key="frame" x="45" y="273" width="292" height="32"/>
-                                <buttonCell key="cell" type="check" title="Enable ⇧⌃⌥ ⌘ + T to show/hide Thor in the menu bar" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="kOR-Gg-12E" userLabel="Enable ⇧⌃⌥ ⌘ + T to show/hide Thor in the menu bar">
+                                <buttonCell key="cell" type="check" title="Enable ⇧⌃⌥ ⌘ + T to show/hide Thor+ in the menu bar" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="kOR-Gg-12E" userLabel="Enable ⇧⌃⌥ ⌘ + T to show/hide Thor in the menu bar">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" size="13" name="STHeitiSC-Light"/>
                                 </buttonCell>
