@@ -300,6 +300,14 @@ final class KeyboardShortcutViewController: NSViewController, KeyboardKeyViewDel
         statusPill.addSubview(statusLabel)
         view.addSubview(statusPill)
 
+        let versionLabel = NSTextField(labelWithString:
+            "版本 \(NSApplication.shortVersionString()) · 构建 \(NSApplication.buildVersionString())")
+        versionLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .regular)
+        versionLabel.textColor = NSColor.white.withAlphaComponent(0.5)
+        versionLabel.alignment = .center
+        versionLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(versionLabel)
+
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 24),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
@@ -314,7 +322,9 @@ final class KeyboardShortcutViewController: NSViewController, KeyboardKeyViewDel
             otherShortcutsLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             otherShortcutsLabel.bottomAnchor.constraint(lessThanOrEqualTo: statusPill.topAnchor, constant: -8),
             statusPill.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            statusPill.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -14),
+            statusPill.bottomAnchor.constraint(equalTo: versionLabel.topAnchor, constant: -7),
+            versionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            versionLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
             statusPill.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 30),
             statusPill.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -30),
             statusLabel.leadingAnchor.constraint(equalTo: statusPill.leadingAnchor, constant: 14),
