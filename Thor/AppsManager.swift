@@ -56,6 +56,22 @@ class AppsManager: NSObject {
         } else {
             loadApps(from: path)
         }
+        for action in WindowLayoutShortcut.allCases {
+            let migrationKey = "ThorPlusWindowLayoutV1." + action.rawValue
+            guard !UserDefaults.standard.bool(forKey: migrationKey) else { continue }
+            if !selectedApps.contains(where: { $0.appBundleIdentifier == action.rawValue }),
+               let app = AppModel(jsonValue: ["appBundleIdentifier": action.rawValue,
+                                             "appDisplayName": action.title,
+                                             "shortcut": action.defaultShortcut]) {
+                // Preserve an existing assignment; leave the new action editable in the list.
+                if selectedApps.contains(where: { $0.shortcut?.keyCode == app.shortcut?.keyCode &&
+                    $0.shortcut?.modifierFlags == app.shortcut?.modifierFlags }) {
+                    app.shortcut = nil
+                }
+                selectedApps.append(app)
+            }
+            if saveData(to: path) { UserDefaults.standard.set(true, forKey: migrationKey) }
+        }
         // Add the requested system action once without replacing existing assignments.
         let migrationKey = "ThorPlusControlCenterShortcutV2"
         if !UserDefaults.standard.bool(forKey: migrationKey),
@@ -76,6 +92,24 @@ class AppsManager: NSObject {
         }
         let openWindowMigrationKey = "ThorPlusOpenWindowShortcutV1"
         let desktopMigrationKey = "ThorPlusShowDesktopShortcutV1"
+        let lockScreenMigrationKey = "ThorPlusLockScreenShortcutV1"
+        let removeWallpaperMigrationKey = "ThorPlusRemoveWallpaperShortcutV1"
+        if !UserDefaults.standard.bool(forKey: removeWallpaperMigrationKey) {
+            selectedApps.removeAll { $0.appBundleIdentifier == "thorplus.action.next-wallpaper" }
+            if saveData(to: path) {
+                UserDefaults.standard.set(true, forKey: removeWallpaperMigrationKey)
+            }
+        }
+        if !UserDefaults.standard.bool(forKey: lockScreenMigrationKey),
+           let shortcut = MASShortcut(from: "alt+l"),
+           !selectedApps.contains(where: { $0.shortcut?.keyCode == shortcut.keyCode &&
+               $0.shortcut?.modifierFlags == shortcut.modifierFlags }),
+           !selectedApps.contains(where: { $0.appBundleIdentifier == "thorplus.action.lock-screen" }),
+           let app = AppModel(jsonValue: ["appBundleIdentifier": "thorplus.action.lock-screen",
+                                         "appDisplayName": "锁定屏幕", "shortcut": "alt+l"]) {
+            selectedApps.append(app)
+            if saveData(to: path) { UserDefaults.standard.set(true, forKey: lockScreenMigrationKey) }
+        }
         if !UserDefaults.standard.bool(forKey: desktopMigrationKey),
            let shortcut = MASShortcut(from: "ctrl+h"),
            !selectedApps.contains(where: { $0.shortcut?.keyCode == shortcut.keyCode &&
@@ -88,12 +122,12 @@ class AppsManager: NSObject {
         }
         if !UserDefaults.standard.bool(forKey: openWindowMigrationKey),
            let identifier = Bundle.main.bundleIdentifier,
-           let shortcut = MASShortcut(from: "shift+ctrl+t"),
+           let shortcut = MASShortcut(from: "ctrl+t"),
            !selectedApps.contains(where: { $0.shortcut?.keyCode == shortcut.keyCode &&
                $0.shortcut?.modifierFlags == shortcut.modifierFlags }),
            let app = AppModel(jsonValue: ["appBundleIdentifier": identifier,
                                          "appBundleURL": Bundle.main.bundleURL.absoluteString,
-                                         "appDisplayName": "Thor+", "shortcut": "shift+ctrl+t"]) {
+                                         "appDisplayName": "Thor+", "shortcut": "ctrl+t"]) {
             if let existing = selectedApps.first(where: { $0.appBundleIdentifier == identifier }) {
                 existing.shortcut = shortcut
             } else {

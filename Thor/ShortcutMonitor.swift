@@ -24,6 +24,15 @@ struct ShortcutMonitor {
                     DesktopShortcut.toggle()
                     return
                 }
+                if app.appBundleIdentifier == "thorplus.action.lock-screen" {
+                    LockScreenShortcut.lock()
+                    return
+                }
+                if let identifier = app.appBundleIdentifier,
+                   let layout = WindowLayoutShortcut(rawValue: identifier) {
+                    layout.apply()
+                    return
+                }
                 guard let appURL = app.resolvedAppBundleURL else { return }
 
                 if app.appBundleIdentifier == Bundle.main.bundleIdentifier {
@@ -69,9 +78,17 @@ struct ShortcutMonitor {
                     }
                 }
             })
+            if let identifier = app.appBundleIdentifier, WindowLayoutShortcut(rawValue: identifier) != nil {
+                UserDefaults.standard.set(registered ? "registered" : "registration-conflict",
+                                          forKey: identifier + ".registration")
+            }
             if app.appBundleIdentifier == "thorplus.action.show-desktop" {
                 UserDefaults.standard.set(registered ? "registered" : "registration-conflict",
                                           forKey: "ShowDesktopRegistrationStatus")
+            }
+            if app.appBundleIdentifier == "thorplus.action.lock-screen" {
+                UserDefaults.standard.set(registered ? "registered" : "registration-conflict",
+                                          forKey: "LockScreenRegistrationStatus")
             }
         }
     }
@@ -131,7 +148,9 @@ enum NotificationClearShortcut {
         guard tap == nil, AXIsProcessTrusted() else { return }
         tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
                                options: .defaultTap, eventsOfInterest:
-                                (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue) | (1 << 14),
+                                (1 << CGEventType.keyDown.rawValue) |
+                                (1 << CGEventType.keyUp.rawValue) |
+                                (1 << 14),
                                callback: { _, type, event, _ in
             if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                 if let tap = NotificationClearShortcut.tap { CGEvent.tapEnable(tap: tap, enable: true) }
@@ -290,6 +309,22 @@ enum DesktopShortcut {
     }
 }
 
+enum LockScreenShortcut {
+    static func lock() {
+        let source = CGEventSource(stateID: .privateState)
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 12, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 12, keyDown: false) else {
+            NSSound.beep()
+            return
+        }
+        keyDown.flags = [.maskControl, .maskCommand]
+        keyUp.flags = [.maskControl, .maskCommand]
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+        UserDefaults.standard.set("lock-event-sent", forKey: "LockScreenLastStatus")
+    }
+}
+
 enum KeyboardBacklightShortcut {
     static func replacement(for event: CGEvent, type: CGEventType) -> CGEvent? {
         let mask: CGEventFlags = [.maskControl, .maskShift, .maskAlternate, .maskCommand, .maskSecondaryFn]
@@ -387,5 +422,158 @@ enum WindowCycler {
             NSLog("Thor: unable to raise window (AX error %d)", result.rawValue)
         }
         return true
+    }
+}
+
+// AX uses a top-left origin anchored to the primary display; AppKit uses bottom-left.
+enum WindowLayoutShortcut: String, CaseIterable {
+    case maximize = "thorplus.action.window-maximize"
+    case left = "thorplus.action.window-left"
+    case right = "thorplus.action.window-right"
+
+    var title: String {
+        switch self {
+        case .maximize: return "最大化当前窗口"
+        case .left: return "窗口左半屏"
+        case .right: return "窗口右半屏"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .maximize: return "arrow.up.left.and.arrow.down.right"
+        case .left: return "rectangle.lefthalf.filled"
+        case .right: return "rectangle.righthalf.filled"
+        }
+    }
+    var defaultShortcut: String {
+        switch self {
+        case .maximize: return "ctrl+`"
+        case .left: return "ctrl+1"
+        case .right: return "ctrl+2"
+        }
+    }
+
+    static func targetFrame(_ visibleFrame: CGRect, layout: WindowLayoutShortcut) -> CGRect {
+        var result = visibleFrame
+        if layout != .maximize {
+            let half = floor(visibleFrame.width / 2)
+            result.size.width = layout == .left ? half : visibleFrame.width - half
+            if layout == .right { result.origin.x += half }
+        }
+        return result
+    }
+
+    private func status(_ message: String) {
+        UserDefaults.standard.set(message, forKey: "WindowLayoutLastStatus")
+    }
+
+    private static func setFrame(window: AXUIElement, position: CGPoint, size: CGSize, final: Bool) -> Bool {
+        var point = position
+        var dimensions = size
+        guard let pointValue = AXValueCreate(.cgPoint, &point),
+              let sizeValue = AXValueCreate(.cgSize, &dimensions) else { return false }
+        // Resize before moving so the right edge can move inside the display.
+        let resize = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+        let move = AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, pointValue)
+        if final {
+            _ = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+        }
+        return resize == .success && move == .success
+    }
+
+    private static var animationTimer: Timer?
+
+    func apply() {
+        // A repeated shortcut starts from the current frame instead of competing with the old animation.
+        Self.animationTimer?.invalidate()
+        Self.animationTimer = nil
+        guard AccessibilityPermission.check() else { status("accessibility-permission-required"); return }
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              let primary = NSScreen.screens.first else { status("no-frontmost-app"); return }
+        let application = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(application, 0.5)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(application, kAXFocusedWindowAttribute as CFString, &value) == .success,
+              let rawWindow = value, CFGetTypeID(rawWindow) == AXUIElementGetTypeID() else {
+            status("no-focused-window"); return
+        }
+        let window = unsafeBitCast(rawWindow, to: AXUIElement.self)
+        var fullScreen: CFTypeRef?
+        if AXUIElementCopyAttributeValue(window, "AXFullScreen" as CFString, &fullScreen) == .success,
+           fullScreen as? Bool == true { status("exit-full-screen-first"); NSSound.beep(); return }
+        func readValue(_ name: String, type: AXValueType, into pointer: UnsafeMutableRawPointer) -> Bool {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(window, name as CFString, &value) == .success,
+                  let raw = value, CFGetTypeID(raw) == AXValueGetTypeID() else { return false }
+            return AXValueGetValue(unsafeBitCast(raw, to: AXValue.self), type, pointer)
+        }
+        var position = CGPoint.zero
+        var size = CGSize.zero
+        guard readValue(kAXPositionAttribute, type: .cgPoint, into: &position),
+              readValue(kAXSizeAttribute, type: .cgSize, into: &size) else {
+            status("window-frame-unavailable"); return
+        }
+        let top = primary.frame.maxY
+        let appKitFrame = CGRect(x: position.x, y: top - position.y - size.height,
+                                 width: size.width, height: size.height)
+        func area(_ rect: CGRect) -> CGFloat { rect.isNull ? 0 : rect.width * rect.height }
+        let screen = NSScreen.screens.max {
+            area($0.frame.intersection(appKitFrame)) < area($1.frame.intersection(appKitFrame))
+        } ?? primary
+        let target = Self.targetFrame(screen.visibleFrame, layout: self)
+        let targetPosition = CGPoint(x: target.minX, y: top - target.maxY)
+        let targetSize = target.size
+        var movable: DarwinBoolean = false
+        var resizable: DarwinBoolean = false
+        guard AXUIElementIsAttributeSettable(window, kAXPositionAttribute as CFString, &movable) == .success,
+              AXUIElementIsAttributeSettable(window, kAXSizeAttribute as CFString, &resizable) == .success,
+              movable.boolValue, resizable.boolValue else {
+            status("window-not-resizable"); NSSound.beep(); return
+        }
+        AXUIElementSetMessagingTimeout(window, 0.05)
+        func finish() {
+            var actualPoint = CGPoint.zero
+            var actualSize = CGSize.zero
+            let read = readValue(kAXPositionAttribute, type: .cgPoint, into: &actualPoint) &&
+                readValue(kAXSizeAttribute, type: .cgSize, into: &actualSize)
+            let matches = read && abs(actualPoint.x - targetPosition.x) < 2 &&
+                abs(actualPoint.y - targetPosition.y) < 2 && abs(actualSize.width - targetSize.width) < 2 &&
+                abs(actualSize.height - targetSize.height) < 2
+            status(matches ? rawValue + ":applied" : rawValue + ":app-constrained-frame")
+        }
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            if Self.setFrame(window: window, position: targetPosition, size: targetSize, final: true) { finish() }
+            else { status("layout-failed") }
+            return
+        }
+        let start = ProcessInfo.processInfo.systemUptime
+        let duration = 0.24
+        let initialPosition = position
+        let initialSize = size
+        status(rawValue + ":animating")
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { timer in
+            guard defaults[.EnableShortcut],
+                  NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else {
+                timer.invalidate()
+                Self.animationTimer = nil
+                status("animation-cancelled")
+                return
+            }
+            let progress = min(1, (ProcessInfo.processInfo.systemUptime - start) / duration)
+            // Smoothstep eases both ends, using elapsed time so slow applications do not stretch the animation.
+            let eased = CGFloat(progress * progress * (3 - 2 * progress))
+            let point = CGPoint(x: initialPosition.x + (targetPosition.x - initialPosition.x) * eased,
+                                y: initialPosition.y + (targetPosition.y - initialPosition.y) * eased)
+            let dimensions = CGSize(width: initialSize.width + (targetSize.width - initialSize.width) * eased,
+                                    height: initialSize.height + (targetSize.height - initialSize.height) * eased)
+            let applied = Self.setFrame(window: window, position: point, size: dimensions, final: progress >= 1)
+            if !applied || progress >= 1 {
+                timer.invalidate()
+                Self.animationTimer = nil
+                if applied { finish() } else { status("layout-failed") }
+            }
+        }
+        Self.animationTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 }

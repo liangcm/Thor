@@ -41,8 +41,14 @@ class AppModel: NSObject {
     }
 
     var icon: NSImage? {
+        if let identifier = appBundleIdentifier, let action = WindowLayoutShortcut(rawValue: identifier) {
+            return NSImage(systemSymbolName: action.symbol, accessibilityDescription: action.title)
+        }
         if appBundleIdentifier == "thorplus.action.show-desktop" {
             return NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: "显示桌面")
+        }
+        if appBundleIdentifier == "thorplus.action.lock-screen" {
+            return NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "锁定屏幕")
         }
         if let storedIconData = storedIconData, let image = NSImage(data: storedIconData) {
             image.size = NSSize(width: 48, height: 48)

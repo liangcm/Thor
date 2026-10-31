@@ -48,7 +48,8 @@ enum ExternalShortcutDetector {
 
     private static func magnetControlShortcuts() -> [Int: String] {
         let bundleIdentifier = "com.crowdcafe.windowmagnet"
-        guard let preferences = UserDefaults(suiteName: bundleIdentifier) else {
+        guard !NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty,
+              let preferences = UserDefaults(suiteName: bundleIdentifier) else {
             return [:]
         }
 
