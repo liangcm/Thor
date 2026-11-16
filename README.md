@@ -62,10 +62,15 @@ SOFTWARE.
 - Control + grave (the key left of 1, shown as · on some Chinese keyboards): maximize the focused window.
 - Control + 1: left half of the current display.
 - Control + 2: right half of the current display.
+- Control + 3: left two-thirds of the current display.
+- Control + 4: right one-third of the current display.
+- Control + Shift + grave: cycle the focused window across displays. Maximized windows fill the destination display; other windows keep their size.
+  Displays are ordered left to right, then top to bottom; the last wraps to the first.
+  A window larger than the destination keeps its size, so it may extend beyond the screen.
 - Control + T: show or hide the Thor+ settings window (default for new installations).
 
-Window changes animate over 0.24 seconds with ease-in/ease-out. Repeated shortcuts
-retarget from the current frame; the macOS Reduce Motion setting is respected.
+Window layouts apply directly without animation. Window accessibility requests allow
+up to 0.5 seconds for apps that respond more slowly, including Lark.
 
 These actions appear in the shortcut list and can be reassigned or cleared. Existing
 assignments are preserved on first launch. Accessibility permission is required.
@@ -74,7 +79,15 @@ space are excluded. Native full-screen windows must first leave full screen, and
 applications may enforce their own minimum window sizes. Quit Magnet to release its
 shortcuts before using these actions.
 
-Local build with Xcode 27:
+To build and update the local installation in `/Applications/Thor+.app`, run
+`bash Support/install-local.sh` with the existing `Thor+ Local Code Signing`
+certificate and private key in Keychain. The installer checks the certificate
+fingerprint and designated signing requirement before replacing the app, then
+verifies that one installed instance is running. Use `--replace-signing-identity`
+for a deliberate signing identity change. macOS may ask you to grant Accessibility
+permission again after a signing identity change.
+
+Compile-only build with Xcode 27:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \

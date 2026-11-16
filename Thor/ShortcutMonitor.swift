@@ -430,19 +430,26 @@ enum WindowLayoutShortcut: String, CaseIterable {
     case maximize = "thorplus.action.window-maximize"
     case left = "thorplus.action.window-left"
     case right = "thorplus.action.window-right"
+    case leftTwoThirds = "thorplus.action.window-left-two-thirds"
+    case rightThird = "thorplus.action.window-right-third"
+    case nextDisplay = "thorplus.action.window-next-display"
 
     var title: String {
         switch self {
         case .maximize: return "最大化当前窗口"
         case .left: return "窗口左半屏"
         case .right: return "窗口右半屏"
+        case .leftTwoThirds: return "窗口左侧三分之二"
+        case .rightThird: return "窗口右侧三分之一"
+        case .nextDisplay: return "移到下一显示器"
         }
     }
     var symbol: String {
         switch self {
         case .maximize: return "arrow.up.left.and.arrow.down.right"
-        case .left: return "rectangle.lefthalf.filled"
-        case .right: return "rectangle.righthalf.filled"
+        case .left, .leftTwoThirds: return "rectangle.lefthalf.filled"
+        case .right, .rightThird: return "rectangle.righthalf.filled"
+        case .nextDisplay: return "display.2"
         }
     }
     var defaultShortcut: String {
@@ -450,50 +457,166 @@ enum WindowLayoutShortcut: String, CaseIterable {
         case .maximize: return "ctrl+`"
         case .left: return "ctrl+1"
         case .right: return "ctrl+2"
+        case .leftTwoThirds: return "ctrl+3"
+        case .rightThird: return "ctrl+4"
+        case .nextDisplay: return "shift+ctrl+`"
         }
     }
 
     static func targetFrame(_ visibleFrame: CGRect, layout: WindowLayoutShortcut) -> CGRect {
-        var result = visibleFrame
-        if layout != .maximize {
-            let half = floor(visibleFrame.width / 2)
-            result.size.width = layout == .left ? half : visibleFrame.width - half
-            if layout == .right { result.origin.x += half }
+        switch layout {
+        case .maximize, .nextDisplay:
+            return visibleFrame
+        case .left, .right:
+            let halves = visibleFrame.divided(atDistance: floor(visibleFrame.width / 2), from: .minXEdge)
+            return layout == .left ? halves.slice : halves.remainder
+        case .leftTwoThirds, .rightThird:
+            let split = floor(visibleFrame.width * 2 / 3)
+            let sections = visibleFrame.divided(atDistance: split, from: .minXEdge)
+            return layout == .leftTwoThirds ? sections.slice : sections.remainder
         }
-        return result
     }
 
     private func status(_ message: String) {
         UserDefaults.standard.set(message, forKey: "WindowLayoutLastStatus")
     }
 
-    private static func setFrame(window: AXUIElement, position: CGPoint, size: CGSize, final: Bool) -> Bool {
-        var point = position
-        var dimensions = size
+    private final class Timing {
+        private let start = ProcessInfo.processInfo.systemUptime
+        private var values = [String: Double]()
+
+        func measure<T>(_ name: String, _ operation: () -> T) -> T {
+            let began = ProcessInfo.processInfo.systemUptime
+            let result = operation()
+            values[name] = (ProcessInfo.processInfo.systemUptime - began) * 1000
+            return result
+        }
+
+        func save() {
+            values["total_ms"] = (ProcessInfo.processInfo.systemUptime - start) * 1000
+            UserDefaults.standard.set(values, forKey: "WindowLayoutTimings")
+        }
+    }
+
+    static func transferredFrame(_ window: CGRect, from source: CGRect, to destination: CGRect) -> CGRect {
+        // Preserve maximization across different display sizes; otherwise keep logical point dimensions.
+        if abs(window.minX - source.minX) < 2 && abs(window.minY - source.minY) < 2 &&
+            abs(window.width - source.width) < 2 && abs(window.height - source.height) < 2 {
+            return destination
+        }
+        let originX = destination.minX + window.minX - source.minX
+        let topOffset = source.maxY - window.maxY
+        let originY = destination.maxY - topOffset - window.height
+        return CGRect(x: min(max(originX, destination.minX), max(destination.minX, destination.maxX - window.width)),
+                      y: min(max(originY, destination.minY), destination.maxY - window.height),
+                      width: window.width, height: window.height)
+    }
+
+    private func destinationFrame(window: CGRect, screen: NSScreen) -> CGRect? {
+        guard self == .nextDisplay else { return Self.targetFrame(screen.visibleFrame, layout: self) }
+        let screens = NSScreen.screens.sorted {
+            if $0.frame.minX != $1.frame.minX { return $0.frame.minX < $1.frame.minX }
+            return $0.frame.maxY > $1.frame.maxY
+        }
+        guard screens.count > 1, let index = screens.firstIndex(of: screen) else { return nil }
+        let destination = screens[(index + 1) % screens.count]
+        return Self.transferredFrame(window, from: screen.visibleFrame, to: destination.visibleFrame)
+    }
+
+    private static func setFrame(window: AXUIElement, original: CGRect, target: CGRect,
+                                 moveOnly: Bool, timing: Timing) -> Bool {
+        var point = target.origin
+        var dimensions = target.size
         guard let pointValue = AXValueCreate(.cgPoint, &point),
               let sizeValue = AXValueCreate(.cgSize, &dimensions) else { return false }
-        // Resize before moving so the right edge can move inside the display.
-        let resize = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
-        let move = AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, pointValue)
-        if final {
-            _ = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+        let needsResize = !moveOnly && original.size != target.size
+        var resize = AXError.success
+        if needsResize {
+            resize = timing.measure("resize_ms") {
+                AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+            }
         }
+        var move = AXError.success
+        if original.origin != target.origin {
+            move = timing.measure("move_ms") {
+                AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, pointValue)
+            }
+        }
+        // Check the result before issuing an expensive duplicate resize.
+        var correction = "skipped"
+        if needsResize {
+            var value: CFTypeRef?
+            let result = timing.measure("read_size_ms") {
+                AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &value)
+            }
+            var actual = CGSize.zero
+            let matches: Bool
+            if result == .success, let raw = value, CFGetTypeID(raw) == AXValueGetTypeID(),
+               AXValueGetValue(unsafeBitCast(raw, to: AXValue.self), .cgSize, &actual) {
+                matches = abs(actual.width - dimensions.width) < 2 && abs(actual.height - dimensions.height) < 2
+            } else { matches = false }
+            if !matches {
+                resize = timing.measure("corrective_resize_ms") {
+                    AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+                }
+                correction = String(resize.rawValue)
+            } else { resize = .success }
+        }
+        UserDefaults.standard.set("resize=\(resize.rawValue), move=\(move.rawValue), correction=\(correction)",
+                                  forKey: "WindowLayoutWriteStatus")
         return resize == .success && move == .success
     }
 
-    private static var animationTimer: Timer?
+    private static func prepareWindowUpdates(_ application: AXUIElement) -> (() -> Void)? {
+        // Prevent the target app from animating individual AX writes; restore its original state afterward.
+        var value: CFTypeRef?
+        let attribute = "AXEnhancedUserInterface" as CFString
+        guard AXUIElementCopyAttributeValue(application, attribute, &value) == .success,
+              value as? Bool == true,
+              AXUIElementSetAttributeValue(application, attribute, kCFBooleanFalse) == .success else { return nil }
+        return {
+            _ = AXUIElementSetAttributeValue(application, attribute, kCFBooleanTrue)
+        }
+    }
+
+    private func verifyFrame(window: AXUIElement, app: NSRunningApplication,
+                             targetPosition: CGPoint, targetSize: CGSize) {
+        var positionValue: CFTypeRef?
+        var sizeValue: CFTypeRef?
+        let positionResult = AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &positionValue)
+        let sizeResult = AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeValue)
+        var point = CGPoint.zero
+        var size = CGSize.zero
+        guard positionResult == .success, sizeResult == .success,
+              let position = positionValue, CFGetTypeID(position) == AXValueGetTypeID(),
+              let dimensions = sizeValue, CFGetTypeID(dimensions) == AXValueGetTypeID(),
+              AXValueGetValue(unsafeBitCast(position, to: AXValue.self), .cgPoint, &point),
+              AXValueGetValue(unsafeBitCast(dimensions, to: AXValue.self), .cgSize, &size) else {
+            status("frame-verification-failed"); return
+        }
+        let matches = abs(point.x - targetPosition.x) < 2 && abs(point.y - targetPosition.y) < 2 &&
+            abs(size.width - targetSize.width) < 2 && abs(size.height - targetSize.height) < 2
+        UserDefaults.standard.set([
+            "app": app.bundleIdentifier ?? "unknown",
+            "target": NSStringFromRect(CGRect(origin: targetPosition, size: targetSize)),
+            "actual": NSStringFromRect(CGRect(origin: point, size: size))
+        ], forKey: "WindowLayoutLastDetails")
+        status(matches ? rawValue + ":applied" : rawValue + ":app-constrained-frame")
+    }
 
     func apply() {
-        // A repeated shortcut starts from the current frame instead of competing with the old animation.
-        Self.animationTimer?.invalidate()
-        Self.animationTimer = nil
+        let timing = Timing()
+        defer { timing.save() }
         guard AccessibilityPermission.check() else { status("accessibility-permission-required"); return }
         guard let app = NSWorkspace.shared.frontmostApplication,
               let primary = NSScreen.screens.first else { status("no-frontmost-app"); return }
         let application = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(application, 0.5)
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(application, kAXFocusedWindowAttribute as CFString, &value) == .success,
+        let focusResult = timing.measure("focused_window_ms") {
+            AXUIElementCopyAttributeValue(application, kAXFocusedWindowAttribute as CFString, &value)
+        }
+        guard focusResult == .success,
               let rawWindow = value, CFGetTypeID(rawWindow) == AXUIElementGetTypeID() else {
             status("no-focused-window"); return
         }
@@ -520,60 +643,29 @@ enum WindowLayoutShortcut: String, CaseIterable {
         let screen = NSScreen.screens.max {
             area($0.frame.intersection(appKitFrame)) < area($1.frame.intersection(appKitFrame))
         } ?? primary
-        let target = Self.targetFrame(screen.visibleFrame, layout: self)
+        guard let target = destinationFrame(window: appKitFrame, screen: screen) else {
+            status("no-other-display"); return
+        }
         let targetPosition = CGPoint(x: target.minX, y: top - target.maxY)
         let targetSize = target.size
+        let moveOnly = self == .nextDisplay && targetSize == size
         var movable: DarwinBoolean = false
         var resizable: DarwinBoolean = false
         guard AXUIElementIsAttributeSettable(window, kAXPositionAttribute as CFString, &movable) == .success,
-              AXUIElementIsAttributeSettable(window, kAXSizeAttribute as CFString, &resizable) == .success,
-              movable.boolValue, resizable.boolValue else {
+              movable.boolValue,
+              moveOnly || (AXUIElementIsAttributeSettable(window, kAXSizeAttribute as CFString,
+                                                                     &resizable) == .success && resizable.boolValue) else {
             status("window-not-resizable"); NSSound.beep(); return
         }
-        AXUIElementSetMessagingTimeout(window, 0.05)
-        func finish() {
-            var actualPoint = CGPoint.zero
-            var actualSize = CGSize.zero
-            let read = readValue(kAXPositionAttribute, type: .cgPoint, into: &actualPoint) &&
-                readValue(kAXSizeAttribute, type: .cgSize, into: &actualSize)
-            let matches = read && abs(actualPoint.x - targetPosition.x) < 2 &&
-                abs(actualPoint.y - targetPosition.y) < 2 && abs(actualSize.width - targetSize.width) < 2 &&
-                abs(actualSize.height - targetSize.height) < 2
-            status(matches ? rawValue + ":applied" : rawValue + ":app-constrained-frame")
+        AXUIElementSetMessagingTimeout(window, 0.5)
+        let restoreEnhancedUI = timing.measure("prepare_ui_ms") { Self.prepareWindowUpdates(application) }
+        defer { timing.measure("restore_ui_ms") { restoreEnhancedUI?() } }
+        let applied = Self.setFrame(window: window, original: CGRect(origin: position, size: size),
+                                    target: CGRect(origin: targetPosition, size: targetSize),
+                                    moveOnly: moveOnly, timing: timing)
+        timing.measure("verify_ms") {
+            verifyFrame(window: window, app: app, targetPosition: targetPosition, targetSize: targetSize)
         }
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            if Self.setFrame(window: window, position: targetPosition, size: targetSize, final: true) { finish() }
-            else { status("layout-failed") }
-            return
-        }
-        let start = ProcessInfo.processInfo.systemUptime
-        let duration = 0.24
-        let initialPosition = position
-        let initialSize = size
-        status(rawValue + ":animating")
-        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { timer in
-            guard defaults[.EnableShortcut],
-                  NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else {
-                timer.invalidate()
-                Self.animationTimer = nil
-                status("animation-cancelled")
-                return
-            }
-            let progress = min(1, (ProcessInfo.processInfo.systemUptime - start) / duration)
-            // Smoothstep eases both ends, using elapsed time so slow applications do not stretch the animation.
-            let eased = CGFloat(progress * progress * (3 - 2 * progress))
-            let point = CGPoint(x: initialPosition.x + (targetPosition.x - initialPosition.x) * eased,
-                                y: initialPosition.y + (targetPosition.y - initialPosition.y) * eased)
-            let dimensions = CGSize(width: initialSize.width + (targetSize.width - initialSize.width) * eased,
-                                    height: initialSize.height + (targetSize.height - initialSize.height) * eased)
-            let applied = Self.setFrame(window: window, position: point, size: dimensions, final: progress >= 1)
-            if !applied || progress >= 1 {
-                timer.invalidate()
-                Self.animationTimer = nil
-                if applied { finish() } else { status("layout-failed") }
-            }
-        }
-        Self.animationTimer = timer
-        RunLoop.main.add(timer, forMode: .common)
+        if !applied { status("layout-failed") }
     }
 }
